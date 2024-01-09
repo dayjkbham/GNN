@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>East Birmingham and North Solihull energy performance certificates</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--    <link rel='shortcut icon' href='Your favicon path goes here' type='image/x-icon'>-->
+    <link href='https://api.mapbox.com/mapbox-assembly/v1.3.0/assembly.min.css' rel='stylesheet'>
+    <script async defer src='https://api.mapbox.com/mapbox-assembly/v1.3.0/assembly.js'></script>
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js"></script>
+    <link href="https://api.tiles.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css" rel="stylesheet"/>
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.3.0/mapbox-gl-draw.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.3.0/mapbox-gl-draw.css' type='text/css' />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <!--    <script src="./js/turf.min.js" charset="utf-8"></script>-->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        h2,
+        h3 {
+            margin: 10px;
+            font-size: 18px;
+        }
+        h3 {
+            font-size: 16px;
+        }
+        p {
+            margin: 10px;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        #features {
+            top: 0;
+            height: 40px;
+            margin-top: 10px;
+            width: 350px;
+        }
+        #legend {
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 18px;
+            height: 150px;
+            margin-bottom: 40px;
+            width: 100px;
+        }
+        .legend-key {
+            display: inline-block;
+            border-radius: 20%;
+            width: 10px;
+            height: 10px;
+            margin-right: 5px;
+        }
+
+        .mapboxgl-ctrl-top-center {
+            top: 0;
+            left: 50%;
+            position:absolute;
+            pointer-events:none;
+            z-index:2;
+        }
+
+        .mapboxgl-ctrl-top-center .mapboxgl-ctrl {
+            margin:10px 0 0 10px;
+        }
+
+
+        .map-overlay {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);'
+        margin-left: 10px;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+            border-radius: 3px;
+            width: 240px;
+            box-shadow: 1px 1px 8px 1px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+
+        .map-overlay-2 {
+            font: 16px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            background: rgba(255, 255, 255, 0.9);
+            position: absolute;
+            border-radius: 3px;
+            width: 240px;
+            z-index: 1;
+            /*max-height: calc(100% - 170px);*/
+            box-shadow: 1px 1px 8px 1px rgba(0, 0, 0, 0.2);
+            top: 55px;
+            right: 10px;
+            padding: 10px;
+            overflow:auto;
+        }
+
+        .map-overlay-2 .categoryLabelFirst {
+            font-weight: bold;
+            display:inline-block;
+            /*margin-top: 5px;*/
+            margin-bottom: 5px;
+        }
+
+        .map-overlay-2 .categoryLabelOthers {
+            font-weight: bold;
+            display:inline-block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            vertical-align: -2px;
+        }
+
+        #menu {
+            background: #fff;
+            position: absolute;
+            z-index: 1;
+            top: 60px;
+            right: 10px;
+            border-radius: 3px;
+            width: 120px;
+            border: 1px solid rgba(0,0,0,0.4);
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        #menu a {
+            font-size: 11px;
+            color: #404040;
+            display: block;
+            margin: 0;
+            padding: 0;
+            padding: 10px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(0,0,0,0.25);
+            text-align: center;
+        }
+
+        #menu a:last-child {
+            border: none;
+        }
+
+        #menu a:hover {
+            background-color: #f8f8f8;
+            color: #404040;
+        }
+
+        #menu a.active {
+            background-color: #3887be;
+            color: #ffffff;
+        }
+
+        #menu a.active:hover {
+            background: #3074a4;
+        }
+
+        .map-overlay-2 .map-overlay-inner {
+            background-color: #fff;
+            box-shadow:0 1px 2px rgba(0, 0, 0, 0.10);
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .map-overlay-inner fieldset {
+            border: none;
+            padding: 0;
+            margin: 0 0 10px;
+        }
+
+        .map-overlay-inner .categoryLabel {
+            display: block;
+            font-weight: bold;
+            margin: 0 0 5px;
+        }
+
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div class='map-overlay-2'>
+    <label class="categoryLabelFirst">Boundary Layers</label>
+    <div>
+        <div>
+            <input type="checkbox" id="Ward boundariesCB" value="Ward boundaries"
+                   onchange="switchlayer('Ward boundaries')" />
+            <label for="Ward boundariesCB">Ward boundaries</label>
+        </div>
+        <div>
+            <input type="checkbox" id="LSOA boundariesCB" value="LSOA boundaries"
+                   onchange="switchlayer('LSOA boundaries')" />
+            <label for="LSOA boundariesCB">LSOA boundaries</label>
+        </div>
+        <div>
+            <input type="checkbox" id="bromfordCB" value="bromford"
+                   onchange="switchBromford('bromford')" />
+            <label for="bromfordCB">Bromford</label>
+        </div>
+<!--        <div>-->
+<!--            <input type="checkbox" id="no epcTenure" value="no epc" onchange="switchvisTenure('no epc')" checked/>-->
+<!--            <label for="no epcTenure">no epc</label>-->
+<!--        </div>-->
+
+        <div>
+                <input type="checkbox" id="no epcCB" value="no epc" onchange="switchvis('no epc')" checked/>
+                <label for="no epcCB">valid epc</label>
+            </div>
+
+        <label class="categoryLabelOthers">Tenure</label>
+        <div>
+            <input type="checkbox" id="owner-occupiedTenure"
+                   value="owner-occupied" onchange="switchvisTenure('owner-occupied')" checked/>
+            <label for="owner-occupiedTenure">owner-occupied</label>
+        </div>
+        <div>
+            <input type="checkbox" id="rental (social)Tenure"
+                   value="rental (social)" onchange="switchvisTenure('rental (social)')" checked/>
+            <label for="rental (social)Tenure">rental (social)</label>
+        </div>
+        <div>
+            <input type="checkbox" id="rental (private)Tenure"
+                   value="rental (private)" onchange="switchvisTenure('rental (private)')" checked/>
+            <label for="rental (private)Tenure">rental (private)</label>
+        </div>
+        <div>
+            <input type="checkbox" id="unknownTenure" value="unknown" onchange="switchvisTenure('unknown')" checked/>
+            <label for="unknownTenure">unknown</label>
+        </div>
+        <div>
+            <input type="checkbox" id="not defined new buildTenure"
+                   value="not defined new build" onchange="switchvisTenure('not defined new build')" checked/>
+            <label for="not defined new buildTenure">not defined new build</label>
+        </div>
+        <div>
+            <input type="checkbox" id="no dataTenure" value="no data" onchange="switchvisTenure('no data')" checked/>
+            <label for="no dataTenure">no data</label>
+        </div>
+
+
+        <label class="categoryLabelOthers">Current EPC Rating</label>
+        <div>
+            <div>
+                <input type="checkbox" id="ACB" value="A" onchange="switchvis('A')" checked/>
+                <label for="ACB">A</label>
+            </div>
+            <div>
+                <input type="checkbox" id="BCB" value="B" onchange="switchvis('B')" checked/>
+                <label for="BCB">B</label>
+            </div>
+            <div>
+                <input type="checkbox" id="CCB" value="C" onchange="switchvis('C')" checked/>
+                <label for="CCB">C</label>
+            </div>
+            <div>
+                <input type="checkbox" id="DCB" value="D" onchange="switchvis('D')" checked/>
+                <label for="DCB">D</label>
+            </div>
+            <div>
+                <input type="checkbox" id="ECB" value="E" onchange="switchvis('E')" checked/>
+                <label for="ECB">E</label>
+            </div>
+            <div>
+                <input type="checkbox" id="FCB" value="F" onchange="switchvis('F')" checked/>
+                <label for="FCB">F</label>
+            </div>
+            <div>
+                <input type="checkbox" id="GCB" value="G" onchange="switchvis('G')" checked/>
+                <label for="GCB">G</label>
+            </div>
+<!--            <div><select id="layerinput" name="layerinput" onchange="switchLayer()" aria-label="LSOA Layer">-->
+<!--                <option value="total_emissions_grade" selected>Total Emission Grade</option>-->
+<!--                <option value="car_emissions_grade">Car Emissions Grade</option>-->
+<!--                <option value="van_grade">Van Emissions Grade</option>-->
+<!--            </div>-->
+        </div>
+    </div>
+    <script type="text/javascript" src="ENBS.js" ></script>
+</div>
+<div class='map-overlay'>
+    <img src="../images/crested-wm-full-coloura.png" alt="University of Birmingham Logo">
+</div>
+
+<!--from https://www.ons.gov.uk/peoplepopulationandcommunity/housing/articles/energyefficiencyofhousinginenglandandwales/2021-->
+<!--<div class="map-overlay" >-->
+<!--<svg id="key" aria-hidden="true" width="210" height="75">-->
+<!--    <g id="horiz" transform="translate(15,35)" fill="none" font-size="10" font-family="sans-serif" text-anchor="middle">-->
+<!--        <text id="currVal" x="118.83495145631069" y="-15" fill="#000" style="opacity: 1;">68</text>-->
+<!--        <rect class="blocks" height="8" x="0" width="34.95145631067961" style="opacity: 0.8; fill: rgb(233, 39, 48);"></rect>-->
+<!--        <rect class="blocks" height="8" x="34.95145631067961" width="31.456310679611654" style="opacity: 0.8; fill: rgb(240, 112, 47);"></rect>-->
+<!--        <rect class="blocks" height="8" x="66.40776699029126" width="27.96116504854369" style="opacity: 0.8; fill: rgb(246, 174, 53);"></rect>-->
+<!--        <rect class="blocks" height="8" x="94.36893203883496" width="24.466019417475735" style="opacity: 0.8; fill: rgb(241, 236, 55);"></rect>-->
+<!--        <rect class="blocks" height="8" x="118.83495145631069" width="20.97087378640775" style="opacity: 0.8; fill: rgb(149, 202, 83);"></rect>-->
+<!--        <rect class="blocks" height="8" x="139.80582524271844" width="19.223300970873794" style="opacity: 0.8; fill: rgb(46, 169, 73);"></rect>-->
+<!--        <rect class="blocks" height="8" x="159.02912621359224" width="20.970873786407765" style="opacity: 0.8; fill: rgb(10, 134, 71);"></rect>-->
+<!--        <path class="domain" stroke="#000" d="M0.5,15V0.5H180.5V15"></path>-->
+<!--        <g class="tick" opacity="1" transform="translate(0,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">0</text>-->
+<!--        </g>-->
+<!--        <g class="tick" opacity="1" transform="translate(34.95145631067961,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">20</text></g>-->
+<!--        <g class="tick" opacity="1" transform="translate(66.40776699029126,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">38</text></g>-->
+<!--        <g class="tick" opacity="1" transform="translate(94.36893203883496,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">54</text></g>-->
+<!--        <g class="tick" opacity="1" transform="translate(118.83495145631069,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">68</text>-->
+<!--        </g>-->
+<!--        <g class="tick" opacity="1" transform="translate(139.80582524271844,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">80</text></g>-->
+<!--        <g class="tick" opacity="1" transform="translate(159.02912621359224,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">91</text></g>-->
+<!--        <g class="tick" opacity="1" transform="translate(180,0)">-->
+<!--            <line stroke="#000" y2="15" x1="0.5" x2="0.5"></line>-->
+<!--            <text fill="#000" y="18" x="0.5" dy="0.71em">103</text>-->
+<!--        </g>-->
+<!--        <line id="currLine" x1="118.83495145631069" x2="118.83495145631069" y1="-10" y2="8" stroke-width="2px" stroke="#000" opacity="0" style="opacity: 1;"></line>-->
+<!--    </g>-->
+<!--</svg>-->
+<!--</div>-->
+
+
+
+
+
+<!--<div class="map-overlay-2">-->
+<!--  <p><label><input type="checkbox" id="carboncheckbox" value="true" onclick="toggleLayer('carbon')" checked>Show Layer</label></p>-->
+<!--  <select id="layerinput" name="layerinput" onchange="switchLayer()" aria-label="LSOA Layer">-->
+<!--      <option value="total_emissions_grade" selected>Total Emission Grade</option>-->
+<!--      <option value="car_emissions_grade">Car Emissions Grade</option>-->
+<!--      <option value="van_grade">Van Emissions Grade</option>-->
+<!--      <option value="gas_emissions_grade">Gas Emissions Grade</option>-->
+<!--      <option value="elec_emissions_grade">Electricity Emissions Grade</option>-->
+<!--      <option value="other_heating_grade">Other Heating Grade</option>-->
+<!--      <option value="flights_grade">Flights Emissions Grade</option>-->
+<!--      <option value="consumption_grade">Goods & Services Grade</option>-->
+<!--      <option value="cars_percap_grade">Cars per person Grade</option>-->
+<!--      <option value="km_percap_grade">km driven per person Grade</option>-->
+<!--      <option value="T2W_Car_grade">Travel to Work (Car) Grade</option>-->
+<!--      <option value="T2W_Cycle_grade">Travel to Work (Bicycle) Grade</option>-->
+<!--      <option value="T2W_Bus_grade">Travel to Work (Bus) Grade</option>-->
+<!--      <option value="T2W_Train_grade">Travel to Work (Train) Grade</option>-->
+<!--      <option value="T2W_Foot_grade">Travel to Work (Foot) Grade</option>-->
+<!--      <option value="EPCScore">EPC Average Score</option>-->
+<!--      <option value="low_energy_light">% homes with low energy lights</option>-->
+<!--      <option value="floor_area_avg">Average home floor area (m2)</option>-->
+<!--      <option value="SOAC11NM">LSOA Area Classification</option>-->
+<!--  </select>-->
+<!--  <div id="layerdesc"><p>Estimated average annual carbon footprint per person for each LSOA. Based on a mix of local and national data. Each area has a grade from A+ (low emissions) to F- (high emissions) in comparison to the England average. See the popup report for more details. </p></div>-->
+
+<!--</div>-->
+
+</body>
+</html>
